@@ -84,12 +84,21 @@ class Lexer(object):
         return int(result)
 
     def _id(self):
+        index = 0
         """Handle identifiers and reserved keywords"""
         result = ''
+        if self.current_char == '_':
+            result +=self.current_char
+            self.advance()
+            index+=1
         while self.current_char is not None and self.current_char.isalnum():
             result += self.current_char
             self.advance()
-
+            index+=1
+        """将所有收集到变量进行大写转换，并且进行添加"""
+        result = result.upper()
+        if index == 3 and result == 'DIV':
+            return Token(DIV, '/')
         token = RESERVED_KEYWORDS.get(result, Token(ID, result))
         return token
 
@@ -100,12 +109,14 @@ class Lexer(object):
         apart into tokens. One token at a time.
         """
         while self.current_char is not None:
-
             if self.current_char.isspace():
                 self.skip_whitespace()
                 continue
 
             if self.current_char.isalpha():
+                return self._id()
+
+            if self.current_char == '_' and self.peek().isalpha():
                 return self._id()
 
             if self.current_char.isdigit():
@@ -132,9 +143,9 @@ class Lexer(object):
                 self.advance()
                 return Token(MUL, '*')
 
-            if self.current_char == '/':
-                self.advance()
-                return Token(DIV, '/')
+            # if self.current_char == '/':
+            #     self.advance()
+            #     return Token(DIV, '/')
 
             if self.current_char == '(':
                 self.advance()
@@ -468,7 +479,6 @@ class Interpreter(NodeVisitor):
 def main():
     import sys
     text = open(sys.argv[1], 'r').read()
-
     lexer = Lexer(text)
     parser = Parser(lexer)
     interpreter = Interpreter(parser)
