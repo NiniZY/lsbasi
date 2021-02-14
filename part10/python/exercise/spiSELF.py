@@ -324,6 +324,7 @@ class Parser(object):
         self.eat(COLON)
 
         type_node = self.type_spec()
+        # list推导式 又称comprehensions，是从一个数据集合推导到另一个数据集合
         var_declarations = [
             VarDecl(var_node, type_node)
             for var_node in var_nodes
