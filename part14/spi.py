@@ -700,6 +700,17 @@ class ProcedureSymbol(Symbol):
     __repr__ = __str__
 
 
+class ProgramSymbol(Symbol):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def __str__(self):
+        return "<{class_name}(name='{name}')>".format(
+            class_name=self.__class__.__name__,
+            name=self.name
+        )
+
+
 class ScopedSymbolTable(object):
     def __init__(self, scope_name, scope_level, enclosing_scope=None):
         self._symbols = {}
@@ -757,6 +768,14 @@ class ScopedSymbolTable(object):
 class SemanticAnalyzer(NodeVisitor):
     def __init__(self):
         self.current_scope = None
+        init_scope = ScopedSymbolTable(
+            scope_name='builtin',
+            scope_level=0,
+            enclosing_scope=self.current_scope
+        )
+        init_scope._init_builtins()
+        self.current_scope = init_scope
+
 
     def visit_Block(self, node):
         for declaration in node.declarations:
@@ -767,19 +786,21 @@ class SemanticAnalyzer(NodeVisitor):
         print('ENTER scope: global')
         global_scope = ScopedSymbolTable(
             scope_name='global',
-            scope_level=1,
-            enclosing_scope=self.current_scope, # None
+            scope_level=self.current_scope.scope_level+1,
+            enclosing_scope=self.current_scope  # self.current_scope 当前是内置scope
         )
-        global_scope._init_builtins()
+        program_symbol = ProgramSymbol(node.name)
+        self.current_scope.insert(program_symbol)
+
         self.current_scope = global_scope
 
         # visit subtree
         self.visit(node.block)
-
-        print(global_scope)
-
-        self.current_scope = self.current_scope.enclosing_scope
         print('LEAVE scope: global')
+        print(global_scope)
+        self.current_scope = self.current_scope.enclosing_scope  # 当前范围的值实际发生了变更。此次的范围识别为内置级别
+        print(self.current_scope)
+
 
     def visit_Compound(self, node):
         for child in node.children:
@@ -932,7 +953,23 @@ class Interpreter(NodeVisitor):
 
 def main():
     import sys
-    text = open(sys.argv[1], 'r').read()
+    text = "program Main;                         " \
+    "   var x, y : real;                   " \
+    "   procedure AlphaA(a : integer);     " \
+    "      var y : integer;                " \
+    "   begin { AlphaA }                   " \
+    "                                      " \
+    "   end;  { AlphaA }                   " \
+    "                                      " \
+    "   procedure AlphaB(a : integer);     " \
+    "      var b : integer;                 " \
+    "   begin { AlphaB }                    " \
+    "                                       " \
+    "   end;  { AlphaB }                    " \
+    "                                       " \
+    "begin { Main }                         " \
+    "                                       " \
+    "end.  { Main }                         "
 
     lexer = Lexer(text)
     parser = Parser(lexer)
