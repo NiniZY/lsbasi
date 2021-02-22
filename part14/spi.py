@@ -874,6 +874,12 @@ class SemanticAnalyzer(NodeVisitor):
                 "Error: Symbol(identifier) not found '%s'" % var_name
             )
 
+    def visit_Num(self, node):
+
+        pass
+
+    def visit_UnaryOp(self, node):
+        pass
 
 ###############################################################################
 #                                                                             #
@@ -953,23 +959,28 @@ class Interpreter(NodeVisitor):
 
 def main():
     import sys
-    text = "program Main;                         " \
-    "   var x, y : real;                   " \
-    "   procedure AlphaA(a : integer);     " \
-    "      var y : integer;                " \
-    "   begin { AlphaA }                   " \
-    "                                      " \
-    "   end;  { AlphaA }                   " \
-    "                                      " \
-    "   procedure AlphaB(a : integer);     " \
-    "      var b : integer;                 " \
-    "   begin { AlphaB }                    " \
-    "                                       " \
-    "   end;  { AlphaB }                    " \
-    "                                       " \
-    "begin { Main }                         " \
-    "                                       " \
-    "end.  { Main }                         "
+    text = "PROGRAM Part10;                               " \
+"VAR                                           " \
+"   number     : INTEGER;                      " \
+"   a, b, c, x : INTEGER;                      " \
+"   y          : REAL;                         " \
+"                                              " \
+"BEGIN {Part10}                                " \
+"   BEGIN                                      " \
+"      number := 2;                            " \
+"      a := number;                            " \
+"      b := 10 * a + 10 * number DIV 4;        " \
+"      c := a - - b                            " \
+"   END;                                       " \
+"   x := 11;                                   " \
+"   y := 20 / 7 + 3.14;                        " \
+"   { writeln('a = ', a); }                    " \
+  "   { writeln('b = ', b); }                    " \
+  "   { writeln('c = ', c); }                    " \
+  "   { writeln('number = ', number); }          " \
+  "   { writeln('x = ', x); }                    " \
+   "   { writeln('y = ', y); }                    " \
+   "END.  {Part10}                                "
 
     lexer = Lexer(text)
     parser = Parser(lexer)
