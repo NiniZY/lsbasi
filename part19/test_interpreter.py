@@ -14,7 +14,7 @@ class LexerTestCase(unittest.TestCase):
             ('3.14', TokenType.REAL_CONST, 3.14),
             ('*', TokenType.MUL, '*'),
             ('DIV', TokenType.INTEGER_DIV, 'DIV'),
-            ('/', TokenType.FLOAT_DIV, '/'),
+            ('/', TokenType.REAL_DIV, '/'),
             ('+', TokenType.PLUS, '+'),
             ('-', TokenType.MINUS, '-'),
             ('(', TokenType.LPAREN, '('),

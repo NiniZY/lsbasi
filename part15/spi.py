@@ -11,6 +11,7 @@ class ErrorCode(Enum):
     UNEXPECTED_TOKEN = 'Unexpected token'
     ID_NOT_FOUND     = 'Identifier not found'
     DUPLICATE_ID     = 'Duplicate id found'
+    WRONG_PARAMETERS = 'Wrong parameters'
 
 
 class Error(Exception):
@@ -369,6 +370,13 @@ class ProcedureDecl(AST):
         self.block_node = block_node
 
 
+class ProcedureCall(AST):
+    def __init__(self, proc_name, actual_params, token):
+        self.proc_name = proc_name
+        self.actual_params = actual_params
+        self.token = token
+
+
 class Parser(object):
     def __init__(self, lexer):
         self.lexer = lexer
@@ -490,6 +498,31 @@ class Parser(object):
         ]
         return var_declarations
 
+    def proccall_statement(self):
+        """proccall_statement : ID LPAREN (expr (COMMA expr)*)? RPAREN"""
+        token = self.current_token
+
+        proc_name = self.current_token.value
+        self.eat(TokenType.ID)
+        self.eat(TokenType.LPAREN)
+        actual_params = []
+        if self.current_token.type != TokenType.RPAREN:
+            node = self.expr()
+            actual_params.append(node)
+
+        while self.current_token.type == TokenType.COMMA:
+            self.eat(TokenType.COMMA)
+            node = self.expr()
+            actual_params.append(node)
+
+        self.eat(TokenType.RPAREN)
+        node = ProcedureCall(
+            proc_name=proc_name,
+            actual_params=actual_params,
+            token=token
+        )
+        return node
+
     def procedure_declaration(self):
         """procedure_declaration :
              PROCEDURE ID (LPAREN formal_parameter_list RPAREN)? SEMI block SEMI
@@ -559,6 +592,8 @@ class Parser(object):
         """
         if self.current_token.type == TokenType.BEGIN:
             node = self.compound_statement()
+        elif self.current_token.type == TokenType.ID and self.lexer.current_char == '(':
+            node = self.proccall_statement()
         elif self.current_token.type == TokenType.ID:
             node = self.assignment_statement()
         else:
@@ -893,6 +928,16 @@ class SemanticAnalyzer(NodeVisitor):
         self.visit(node.left)
         self.visit(node.right)
 
+    def visit_ProcedureCall(self, node):
+        real_size = node.actual_params.__len__()
+        # size = node.params.size
+        item = self.current_scope.lookup(node.proc_name)
+        logical_size = item.params.__len__()
+        if real_size != logical_size:
+            self.error(ErrorCode.WRONG_PARAMETERS, TokenType.PROCEDURE)
+        for param_node in node.actual_params:
+            self.visit(param_node)
+
     def visit_ProcedureDecl(self, node):
         proc_name = node.proc_name
         proc_symbol = ProcedureSymbol(proc_name)
@@ -1029,6 +1074,9 @@ class Interpreter(NodeVisitor):
     def visit_ProcedureDecl(self, node):
         pass
 
+    def visit_ProcedureCall(self, node):
+        pass
+
     def interpret(self):
         tree = self.tree
         if tree is None:
@@ -1040,17 +1088,29 @@ def main():
     parser = argparse.ArgumentParser(
         description='SPI - Simple Pascal Interpreter'
     )
-    parser.add_argument('inputfile', help='Pascal source file')
-    parser.add_argument(
-        '--scope',
-        help='Print scope information',
-        action='store_true',
-    )
+    # parser.add_argument('inputfile', help='Pascal source file')
+    # parser.add_argument(
+    #     '--scope',
+    #     help='Print scope information',
+    #     action='store_true',
+    # )
     args = parser.parse_args()
-    global _SHOULD_LOG_SCOPE
-    _SHOULD_LOG_SCOPE = args.scope
+    # global _SHOULD_LOG_SCOPE
+    # _SHOULD_LOG_SCOPE = args.scope
 
-    text = open(args.inputfile, 'r').read()
+    text = "program Main;                             "\
+            "                                          "\
+            "procedure Alpha(a : integer; b : integer);"\
+            "var x : integer;                          "\
+            "begin                                     "\
+            "   x := (a + b ) * 2;                     "\
+            "end;                                      "\
+            "                                          "\
+            "begin { Main }                            "\
+            "                                          "\
+            "   Alpha(3 + 5, 4, 7);  { procedure call }   "\
+            "                                          "\
+            "end.  { Main }                            "
 
     lexer = Lexer(text)
     try:
